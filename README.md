@@ -251,5 +251,58 @@ python host/run_submission.py \
 
 When `--split test` is selected, the runner decrypts the required encrypted CSV in memory and does not create a plaintext test file.
 
+### Task 2 raw calibration
+
+`host/run_submission.py --calibrate {host,pico,none}` (default `pico`) applies a per-channel gain and clip, fit from `train_raw_3x3_1cm.csv` vs `train_clean_3x3_1cm.csv`, to correct the systematic raw-vs-clean domain shift before the frozen Task 1 model runs:
+
+- `host` — the runner multiplies/clips the features here before sending them.
+- `pico` — the runner sends raw features and sets a protocol flag asking the firmware to apply its own baked-in gains (`firmware/vlp_serial/calibration_data.h`).
+- `none` — disables the correction.
+
+Regenerate the gains/clip bounds and the firmware header with:
+
+```bash
+python scripts/fit_task2_calibration.py
+```
+
+`--calibrate` only ever takes effect for `--source raw`; the runner automatically forces it to `none` for clean-source data (e.g. Task 1), since applying it there would distort already-clean readings.
+
+### Task 4 aging calibration
+
+`host/run_submission.py --aging-calibrate {host,pico,none}` (default `pico`) runs an online per-channel automatic-gain-control filter — a running peak tracker (instant attack, slow release) compared against each channel's fresh-installation reference peak — to compensate for the session-level LED brightness decay simulated in Task 4:
+
+- `host` — the runner applies the stateful, stream-order filter here before sending features.
+- `pico` — the runner sends raw features and sets a protocol flag asking the firmware to run the same filter on-device (`firmware/vlp_serial/aging_data.h`), with persistent state that resets automatically every time the runner queries device info at the start of a run.
+- `none` — disables the correction.
+
+Regenerate the reference peaks/hyperparameters and the firmware header with:
+
+```bash
+python scripts/fit_task4_aging_calibration.py
+```
+
+`--aging-calibrate` only ever takes effect for `--task 4`; the runner automatically forces it to `none` for every other task, since this filter is *not* a no-op on unaged data (it roughly doubles Task 1's error if applied there).
+
+### Running multiple tasks on one flash
+
+Tasks 1, 2, and 4 all reuse the exact same frozen 9-feature model, so a single firmware flash serves all three — pass `--no-flash` and re-run the evaluator per task without touching BOOTSEL in between:
+
+```bash
+python host/run_submission.py --task 1 --split validation --source clean --port /dev/ttyACM0 --uf2 firmware/build/vlp_pico.uf2 --no-flash
+python host/run_submission.py --task 2 --split validation --source raw   --port /dev/ttyACM0 --uf2 firmware/build/vlp_pico.uf2 --no-flash --calibrate pico
+python host/run_submission.py --task 4 --split validation               --port /dev/ttyACM0 --uf2 firmware/build/vlp_pico.uf2 --no-flash --aging-calibrate pico
+```
+
+Task 3 uses a different model architecture (36-channel 6x6 input) and needs its own separate firmware build/flash.
+
+### Evaluation history CSV
+
+Every run appends one row (timestamp, task, split, source, calibration modes, error metrics, timing, model/firmware sizes) to a CSV for comparing runs over time:
+
+```bash
+--csv-out eval/eval_history.csv   # default path
+--no-csv-out                      # disable logging
+```
+
 ## References
 [1] Zhu, Ran, et al. "Centimeter-level indoor visible light positioning." IEEE Communications Magazine 62.3 (2023): 48-53.

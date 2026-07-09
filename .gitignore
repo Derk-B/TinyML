@@ -1,0 +1,19 @@
+# Claude Code session data
+.claude/
+
+# Firmware build toolchain (regenerate via firmware/build_firmware.sh)
+.deps/
+.build/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db

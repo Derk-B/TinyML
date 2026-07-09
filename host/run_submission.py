@@ -111,8 +111,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--csv-out",
         type=Path,
-        default=ROOT / "host" / "eval_history.csv",
-        help="Append each run's summary metrics as a row to this CSV (default: host/eval_history.csv)",
+        default=ROOT / "eval" / "eval_history.csv",
+        help="Append each run's summary metrics as a row to this CSV (default: eval/eval_history.csv)",
     )
     p.add_argument(
         "--no-csv-out",

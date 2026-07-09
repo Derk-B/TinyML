@@ -1,0 +1,252 @@
+------------------------------------TASK-1--------------------------------------
+
+(prune_llm) C:\Users\skalra\Workspace\SYS_AI_VLP_Hackathon>python host/run_submission.py --task 1 --split test --source clean --port COM7 --uf2 firmware/build/vlp_pico.uf2 --no-flash
+Hidden test password: 
+Warning: --calibrate=pico only applies to --source raw; ignoring it for clean-source data
+Warning: --aging-calibrate=pico only applies to Task 4; ignoring it for this task
+Evaluating task=1 split=test source=clean samples=5000 features=9
+  500/5000 samples
+  1000/5000 samples
+  1500/5000 samples
+  2000/5000 samples
+  2500/5000 samples
+  3000/5000 samples
+  3500/5000 samples
+  4000/5000 samples
+  4500/5000 samples
+  5000/5000 samples
+
+=== RESULT ===
+{
+  "task": 1,
+  "split": "test",
+  "source": "clean",
+  "calibrate": "none",
+  "aging_calibrate": "none",
+  "samples": 5000,
+  "input_features": 9,
+  "mean_device_invoke_ms": 17.8725386,
+  "mean_serial_round_trip_ms": 20.734862900000003,
+  "p95_serial_round_trip_ms": 21.581940000000003,
+  "tflite_model_bytes": 122624,
+  "tensor_arena_bytes": 81920,
+  "uf2_firmware_bytes": 441856,
+  "mean_positioning_error_cm": 1.8680058717727661,
+  "median_positioning_error_cm": 1.6183570623397827,
+  "p95_positioning_error_cm": 4.104883670806885
+}
+Appended result to: C:\Users\skalra\Workspace\SYS_AI_VLP_Hackathon\eval\eval_history.csv
+
+
+------------------------------------TASK-2--------------------------------------
+
+(prune_llm) C:\Users\skalra\Workspace\SYS_AI_VLP_Hackathon>python host/run_submission.py --task 2 --split test --source raw --port COM7 --uf2 firmware/build/vlp_pico.uf2 --no-flash --calibrate pico
+Hidden test password: 
+Warning: --aging-calibrate=pico only applies to Task 4; ignoring it for this task
+Evaluating task=2 split=test source=raw samples=5000 features=9
+  500/5000 samples
+  1000/5000 samples
+  1500/5000 samples
+  2000/5000 samples
+  2500/5000 samples
+  3000/5000 samples
+  3500/5000 samples
+  4000/5000 samples
+  4500/5000 samples
+  5000/5000 samples
+
+=== RESULT ===
+{
+  "task": 2,
+  "split": "test",
+  "source": "raw",
+  "calibrate": "pico",
+  "aging_calibrate": "none",
+  "samples": 5000,
+  "input_features": 9,
+  "mean_device_invoke_ms": 17.873030800000002,
+  "mean_serial_round_trip_ms": 20.63866058,
+  "p95_serial_round_trip_ms": 21.566655,
+  "tflite_model_bytes": 122624,
+  "tensor_arena_bytes": 81920,
+  "uf2_firmware_bytes": 441856,
+  "mean_positioning_error_cm": 16.4591064453125,
+  "median_positioning_error_cm": 5.56876802444458,
+  "p95_positioning_error_cm": 62.72552490234375
+}
+Appended result to: C:\Users\skalra\Workspace\SYS_AI_VLP_Hackathon\eval\eval_history.csv
+
+
+------------------------------------TASK-3--------------------------------------
+
+.venv) lei.wang@UT185968 SYS_AI_VLP_Hackathon % python host/run_submission.py \
+  --task 3 \
+  --split test \
+  --source clean \
+  --port /dev/cu.usbmodem31301 \
+  --uf2 firmware/build/vlp_pico.uf2
+Hidden test password: 
+Flashing: picotool load -f -x firmware/build/vlp_pico.uf2
+Tracking device serial number E663AC91D367BF38 for reboot
+The device was asked to reboot into BOOTSEL mode so the command can be executed.
+ 
+Loading into Flash:   [==============================]  100%
+ 
+The device was rebooted to start the application.
+Evaluating task=3 split=test source=clean samples=5000 features=36
+  500/5000 samples
+  1000/5000 samples
+  1500/5000 samples
+  2000/5000 samples
+  2500/5000 samples
+  3000/5000 samples
+  3500/5000 samples
+  4000/5000 samples
+  4500/5000 samples
+  5000/5000 samples
+ 
+=== RESULT ===
+{
+  "task": 3,
+  "split": "test",
+  "source": "clean",
+  "samples": 5000,
+  "input_features": 36,
+  "mean_device_invoke_ms": 14.8699092,
+  "mean_serial_round_trip_ms": 17.7222019708,
+  "p95_serial_round_trip_ms": 17.84316815,
+  "tflite_model_bytes": 38344,
+  "tensor_arena_bytes": 81920,
+  "uf2_firmware_bytes": 275968,
+  "mean_positioning_error_cm": 1.5586261749267578,
+  "median_positioning_error_cm": 1.2785710096359253,
+  "p95_positioning_error_cm": 3.925654411315918
+}
+
+
+
+------------------------------------TASK-4--------------------------------------
+
+(prune_llm) C:\Users\skalra\Workspace\SYS_AI_VLP_Hackathon>python host/run_submission.py --task 4 --split test --port COM7 --uf2 firmware/build/vlp_pico.uf2 --no-flash --aging-calibrate pico      
+Hidden test password: 
+Warning: --calibrate=pico only applies to --source raw; ignoring it for clean-source data
+Task 4 aging: 10 contiguous episode(s), episode ages in [10688.1, 46370.4] h
+Evaluating task=4 split=test source=clean samples=5000 features=9
+  500/5000 samples
+  1000/5000 samples
+  1500/5000 samples
+  2000/5000 samples
+  2500/5000 samples
+  3000/5000 samples
+  3500/5000 samples
+  4000/5000 samples
+  4500/5000 samples
+  5000/5000 samples
+
+=== RESULT ===
+{
+  "task": 4,
+  "split": "test",
+  "source": "clean",
+  "calibrate": "none",
+  "aging_calibrate": "pico",
+  "samples": 5000,
+  "input_features": 9,
+  "mean_device_invoke_ms": 17.878259,
+  "mean_serial_round_trip_ms": 20.4356442,
+  "p95_serial_round_trip_ms": 21.560465,
+  "tflite_model_bytes": 122624,
+  "tensor_arena_bytes": 81920,
+  "uf2_firmware_bytes": 441856,
+  "mean_positioning_error_cm": 2.808635711669922,
+  "median_positioning_error_cm": 2.490103244781494,
+  "p95_positioning_error_cm": 5.668926239013672,
+  "aging_episodes": 10,
+  "aging_min_episode_hours": 10688.1484375,
+  "aging_max_episode_hours": 46370.36328125,
+  "aging_mean_episode_mean_positioning_error_cm": 2.808635950088501,
+  "aging_worst_episode_mean_positioning_error_cm": 3.272581100463867,
+  "aging_episode_metrics": [
+    {
+      "episode": 0,
+      "samples": 500,
+      "aging_hours": 10688.1484375,
+      "mean_positioning_error_cm": 2.9145851135253906,
+      "median_positioning_error_cm": 2.5690059661865234,
+      "p95_positioning_error_cm": 5.6237473487854
+    },
+    {
+      "episode": 1,
+      "samples": 500,
+      "aging_hours": 11595.4091796875,
+      "mean_positioning_error_cm": 2.2406997680664062,
+      "median_positioning_error_cm": 1.919847011566162,
+      "p95_positioning_error_cm": 5.002090930938721
+    },
+    {
+      "episode": 2,
+      "samples": 500,
+      "aging_hours": 12248.23046875,
+      "mean_positioning_error_cm": 2.7441704273223877,
+      "median_positioning_error_cm": 2.3492393493652344,
+      "p95_positioning_error_cm": 5.377207279205322
+    },
+    {
+      "episode": 3,
+      "samples": 500,
+      "aging_hours": 25648.5234375,
+      "mean_positioning_error_cm": 2.6940786838531494,
+      "median_positioning_error_cm": 2.3426260948181152,
+      "p95_positioning_error_cm": 5.811583995819092
+    },
+    {
+      "episode": 4,
+      "samples": 500,
+      "aging_hours": 31497.009765625,
+      "mean_positioning_error_cm": 2.6814870834350586,
+      "median_positioning_error_cm": 2.375809669494629,
+      "p95_positioning_error_cm": 5.471639633178711
+    },
+    {
+      "episode": 5,
+      "samples": 500,
+      "aging_hours": 37073.3515625,
+      "mean_positioning_error_cm": 2.824146270751953,
+      "median_positioning_error_cm": 2.5713748931884766,
+      "p95_positioning_error_cm": 5.60451078414917
+    },
+    {
+      "episode": 6,
+      "samples": 500,
+      "aging_hours": 39956.2578125,
+      "mean_positioning_error_cm": 2.702481746673584,
+      "median_positioning_error_cm": 2.4462509155273438,
+      "p95_positioning_error_cm": 5.463509559631348
+    },
+    {
+      "episode": 7,
+      "samples": 500,
+      "aging_hours": 41212.078125,
+      "mean_positioning_error_cm": 3.125991106033325,
+      "median_positioning_error_cm": 2.951540470123291,
+      "p95_positioning_error_cm": 5.968723297119141
+    },
+    {
+      "episode": 8,
+      "samples": 500,
+      "aging_hours": 44494.6328125,
+      "mean_positioning_error_cm": 2.8861377239227295,
+      "median_positioning_error_cm": 2.580343723297119,
+      "p95_positioning_error_cm": 5.64276123046875
+    },
+    {
+      "episode": 9,
+      "samples": 500,
+      "aging_hours": 46370.36328125,
+      "mean_positioning_error_cm": 3.272581100463867,
+      "median_positioning_error_cm": 2.8586058616638184,
+      "p95_positioning_error_cm": 5.946534633636475
+    }
+  ]
+}
+Appended result to: C:\Users\skalra\Workspace\SYS_AI_VLP_Hackathon\eval\eval_history.csv

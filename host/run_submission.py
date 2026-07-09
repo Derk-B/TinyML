@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from vlp_hackathon.aging import AgingConfig, age_rss_episodes
+from vlp_hackathon.aging_calibration import run_online_aging_calibration
 from vlp_hackathon.dataset import DatasetConfig, load_task_split
 from vlp_hackathon.metrics import euclidean_errors_cm
 from vlp_hackathon.protocol import get_device_info, send_predict
@@ -107,6 +108,23 @@ def parse_args() -> argparse.Namespace:
         default=ROOT / "models" / "task2_raw_calibration.npz",
         help="Per-channel calibration gains produced by scripts/fit_task2_calibration.py",
     )
+    p.add_argument(
+        "--aging-calibrate",
+        choices=["host", "pico", "none"],
+        default="pico",
+        help=(
+            "Where to apply the Task 4 online per-channel aging AGC: 'host' runs the "
+            "sequential filter here before sending features; 'pico' sends raw features "
+            "and asks the firmware to run its own running-peak filter; 'none' disables "
+            "it (default: pico)"
+        ),
+    )
+    p.add_argument(
+        "--aging-calibration-npz",
+        type=Path,
+        default=ROOT / "models" / "task4_aging_calibration.npz",
+        help="Aging AGC reference/hyperparameters produced by scripts/fit_task4_aging_calibration.py",
+    )
     p.add_argument("--json-out", type=Path, default=None)
     p.add_argument(
         "--csv-out",
@@ -181,12 +199,50 @@ def load_calibration(path: Path, expected_channels: int) -> Calibration:
     )
 
 
+@dataclass(frozen=True)
+class AgingCalibration:
+    ref_channel_max: np.ndarray
+    leak: float
+    gain_min: float
+    gain_max: float
+
+    def apply(self, x: np.ndarray) -> np.ndarray:
+        return run_online_aging_calibration(
+            x,
+            self.ref_channel_max,
+            leak=self.leak,
+            gain_clip=(self.gain_min, self.gain_max),
+        )
+
+
+def load_aging_calibration(path: Path, expected_channels: int) -> AgingCalibration:
+    if not path.exists():
+        raise SystemExit(
+            f"Aging calibration file not found: {path}. Run "
+            "scripts/fit_task4_aging_calibration.py first, or pass --aging-calibrate none."
+        )
+    data = np.load(path)
+    ref_channel_max = data["ref_channel_max"].astype(np.float32)
+    if len(ref_channel_max) != expected_channels:
+        raise SystemExit(
+            f"Aging calibration file {path} has {len(ref_channel_max)} channel(s) but "
+            f"this task sends {expected_channels} features. Re-fit for this task."
+        )
+    return AgingCalibration(
+        ref_channel_max=ref_channel_max,
+        leak=float(data["leak"]),
+        gain_min=float(data["gain_min"]),
+        gain_max=float(data["gain_max"]),
+    )
+
+
 CSV_FIELDS = [
     "timestamp",
     "task",
     "split",
     "source",
     "calibrate",
+    "aging_calibrate",
     "samples",
     "input_features",
     "mean_device_invoke_ms",
@@ -267,6 +323,17 @@ def main() -> None:
         )
         args.calibrate = "none"
 
+    if args.task != 4 and args.aging_calibrate != "none":
+        # The aging AGC is referenced against fresh-installation clean-data
+        # peaks and measurably hurts accuracy on unaged data (verified: it
+        # roughly doubles Task 1's error), so only Task 4 ever applies it.
+        print(
+            f"Warning: --aging-calibrate={args.aging_calibrate} only applies to "
+            "Task 4; ignoring it for this task",
+            file=sys.stderr,
+        )
+        args.aging_calibrate = "none"
+
     flash_firmware(args)
 
     cfg = DatasetConfig(
@@ -324,6 +391,12 @@ def main() -> None:
             f"{aging_metadata.episode_hours.max():.1f}] h",
             flush=True,
         )
+        if args.aging_calibrate != "none":
+            aging_calibration = load_aging_calibration(args.aging_calibration_npz, x.shape[1])
+            if args.aging_calibrate == "host":
+                # Stateful and strictly sequential: must run in stream order,
+                # after shuffling/sampling/aging have fixed that order.
+                x = aging_calibration.apply(x)
 
     print(
         f"Evaluating task={args.task} split={args.split} source={args.source} "
@@ -354,7 +427,10 @@ def main() -> None:
         for i, features in enumerate(x):
             t0 = time.perf_counter_ns()
             response = send_predict(
-                ser, features, apply_device_calibration=(args.calibrate == "pico")
+                ser,
+                features,
+                apply_device_calibration=(args.calibrate == "pico"),
+                apply_device_aging_calibration=(args.aging_calibrate == "pico"),
             )
             t1 = time.perf_counter_ns()
             predictions[i] = [response.x_cm, response.y_cm]
@@ -369,6 +445,7 @@ def main() -> None:
         "split": args.split,
         "source": args.source,
         "calibrate": args.calibrate,
+        "aging_calibrate": args.aging_calibrate,
         "samples": int(len(x)),
         "input_features": int(x.shape[1]),
         "mean_device_invoke_ms": float(invoke_ms.mean()),

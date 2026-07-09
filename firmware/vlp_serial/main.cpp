@@ -5,6 +5,7 @@
 #include "pico/stdio.h"
 #include "pico/stdlib.h"
 
+#include "aging_data.h"
 #include "calibration_data.h"
 #include "model_data.h"
 #include "preprocess_data.h"
@@ -27,6 +28,7 @@ constexpr uint8_t kStatusBadCommand = 2;
 constexpr uint8_t kStatusBadFeatureCount = 3;
 constexpr uint8_t kStatusInvokeFailed = 4;
 constexpr uint8_t kFlagApplyCalibration = 0x01;
+constexpr uint8_t kFlagApplyAgingCalibration = 0x02;
 constexpr uint32_t kReadTimeoutUs = 5000000;
 constexpr size_t kTensorArenaBytes = 80 * 1024;
 
@@ -36,6 +38,17 @@ const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
+
+// Persistent per-channel running peak for the Task 4 online aging AGC.
+// Reset on every CMD_INFO request, since the host always queries device
+// info once at the start of a run before streaming predictions.
+float ema_peak[kAgingChannels];
+
+void reset_aging_state() {
+  for (int i = 0; i < kAgingChannels; ++i) {
+    ema_peak[i] = kRefChannelMax[i];
+  }
+}
 
 bool read_exact(uint8_t* dst, size_t count) {
   for (size_t i = 0; i < count; ++i) {
@@ -110,6 +123,7 @@ void send_predict_status(uint8_t status, float x_cm, float y_cm, uint32_t invoke
 }
 
 void send_info(uint8_t status) {
+  reset_aging_state();
   uint8_t response[16] = {0};
   std::memcpy(response, kInfoMagic, 4);
   response[4] = status;
@@ -178,6 +192,8 @@ void handle_predict(uint16_t n_features, uint8_t flags) {
 
   const bool apply_calibration =
       (flags & kFlagApplyCalibration) != 0 && kCalibrationChannels == expected;
+  const bool apply_aging_calibration =
+      (flags & kFlagApplyAgingCalibration) != 0 && kAgingChannels == expected;
 
   for (int i = 0; i < expected; ++i) {
     uint8_t raw[4];
@@ -190,6 +206,19 @@ void handle_predict(uint16_t n_features, uint8_t flags) {
       rss = rss < kCalibrationClipLo[i] ? kCalibrationClipLo[i]
             : rss > kCalibrationClipHi[i] ? kCalibrationClipHi[i]
                                            : rss;
+    }
+    if (apply_aging_calibration) {
+      // Sequential per-channel AGC: instant attack, slow release running
+      // peak compared against the fresh-installation reference. Gain is
+      // clamped to >= 1 since aging only ever attenuates.
+      ema_peak[i] = std::fabs(rss) > ema_peak[i] * kAgingLeak
+                        ? std::fabs(rss)
+                        : ema_peak[i] * kAgingLeak;
+      float gain = kRefChannelMax[i] / (ema_peak[i] > 1e-6f ? ema_peak[i] : 1e-6f);
+      gain = gain < kAgingGainMin ? kAgingGainMin
+             : gain > kAgingGainMax ? kAgingGainMax
+                                     : gain;
+      rss *= gain;
     }
     const float normalized = rss / kRssScale;
     if (input->type == kTfLiteFloat32) {
@@ -233,6 +262,7 @@ void handle_predict(uint16_t n_features, uint8_t flags) {
 
 int main() {
   stdio_init_all();
+  reset_aging_state();
 
   if (!initialize_model()) {
     // Keep USB CDC free for the binary host protocol.

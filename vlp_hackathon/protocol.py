@@ -14,6 +14,7 @@ CMD_PREDICT = 1
 CMD_INFO = 2
 STATUS_OK = 0
 FLAG_APPLY_CALIBRATION = 0x01
+FLAG_APPLY_AGING_CALIBRATION = 0x02
 
 # request: magic[4], command u8, n_features u16, flags u8
 REQUEST_HEADER = struct.Struct("<4sBHB")
@@ -55,11 +56,16 @@ def send_predict(
     features: np.ndarray,
     *,
     apply_device_calibration: bool = False,
+    apply_device_aging_calibration: bool = False,
 ) -> PredictionResponse:
     features = np.asarray(features, dtype="<f4").reshape(-1)
     if len(features) > 65535:
         raise ValueError("Too many input features")
-    flags = FLAG_APPLY_CALIBRATION if apply_device_calibration else 0
+    flags = 0
+    if apply_device_calibration:
+        flags |= FLAG_APPLY_CALIBRATION
+    if apply_device_aging_calibration:
+        flags |= FLAG_APPLY_AGING_CALIBRATION
     stream.write(REQUEST_HEADER.pack(REQUEST_MAGIC, CMD_PREDICT, len(features), flags))
     stream.write(features.tobytes(order="C"))
     if hasattr(stream, "flush"):
